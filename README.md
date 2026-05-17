@@ -49,7 +49,7 @@ InventoryManagementSystem.sln
 ### 1. Clonar el repositorio
 
 ```bash
-git clone https://github.com/your-username/InventoryManagementSystem.git
+git clone https://github.com/Davicho95/InventoryManagementSystem_DavidJaramillo.git
 ```
 
 ### 2. Abrir la solución en Visual Studio
