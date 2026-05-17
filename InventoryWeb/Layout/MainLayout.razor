@@ -1,0 +1,39 @@
+﻿@using InventoryWeb.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inherits LayoutComponentBase
+
+<div class="layout">
+    <AuthorizeView>
+        <Authorized>
+            <nav class="navbar">
+                <div class="brand">Inventory <span>Manager</span></div>
+                <div class="nav-links">
+                    <NavLink href="/" Match="NavLinkMatch.All">Products</NavLink>
+                </div>
+                <div class="nav-user">
+                    <AuthorizeView>
+                        <Authorized Context="authContext">
+                            @authContext.User.FindFirst(
+                                                        System.Security.Claims.ClaimTypes.Email)?.Value
+                        </Authorized>
+                    </AuthorizeView>
+                    <button class="btn-logout" @onclick="Logout">Sign out</button>
+                </div>
+            </nav>
+        </Authorized>
+    </AuthorizeView>
+    <main class="main-content">
+        @Body
+    </main>
+</div>
+
+@code {
+    [Inject] AuthService AuthService { get; set; } = default!;
+    [Inject] NavigationManager Navigation { get; set; } = default!;
+
+    async Task Logout()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/login");
+    }
+}

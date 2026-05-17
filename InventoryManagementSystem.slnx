@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/Aplicacion/">
+    <Project Path="Aplicacion/Aplicacion.csproj" />
+  </Folder>
+  <Folder Name="/Dominio/">
+    <Project Path="Dominio/Dominio.csproj" />
+  </Folder>
+  <Folder Name="/Persistencia/">
+    <Project Path="Persistencia/Persistencia.csproj" />
+  </Folder>
+  <Folder Name="/Presentacion/">
+    <Project Path="InventoryApi/InventoryApi.csproj" />
+    <Project Path="InventoryWeb/InventoryWeb.csproj" />
+  </Folder>
+</Solution>

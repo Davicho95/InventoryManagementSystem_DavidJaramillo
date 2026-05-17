@@ -1,0 +1,53 @@
+﻿@page "/login"
+@using InventoryWeb.Models
+@using InventoryWeb.Services
+@layout EmptyLayout
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<div class="login-wrap">
+    <div class="login-card">
+        <div class="brand">Inventory <span>Manager</span></div>
+        <h2>Sign in</h2>
+        <p class="sub">Enter your credentials to continue</p>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert-error">@errorMessage</div>
+        }
+
+        <div class="field">
+            <label>Email</label>
+            <input type="email" @bind="model.Email" placeholder="admin@inventory.com" />
+        </div>
+        <div class="field">
+            <label>Password</label>
+            <input type="password" @bind="model.Password" placeholder="••••••••" />
+        </div>
+        <button class="btn-primary" @onclick="HandleLogin" disabled="@loading">
+            @(loading ? "Signing in..." : "Sign in")
+        </button>
+        <div class="hint">
+            Default: <b>admin@inventory.com</b> / <b>Admin123!</b>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginRequest model = new();
+    private string? errorMessage;
+    private bool loading = false;
+
+    async Task HandleLogin()
+    {
+        loading = true;
+        errorMessage = null;
+        var success = await AuthService.LoginAsync(model);
+        loading = false;
+
+        if (success)
+            Navigation.NavigateTo("/");
+        else
+            errorMessage = "Invalid email or password.";
+    }
+}

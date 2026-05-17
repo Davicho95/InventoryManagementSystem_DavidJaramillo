@@ -1,0 +1,179 @@
+﻿@page "/products/{Id:int}"
+@using InventoryWeb.Models
+@using InventoryWeb.Services
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject ProductService ProductService
+@inject NavigationManager Navigation
+
+<PageTitle>Product Detail</PageTitle>
+
+@if (producto == null)
+{
+    <p class="loading">Loading...</p>
+}
+else
+{
+    <div class="page-header">
+        <a class="back-link" href="/">← Back to products</a>
+    </div>
+
+    <div class="detail-card">
+        <div class="detail-top">
+            <div>
+                <h2>@producto.Nombre</h2>
+                <div class="p-sku">SKU: @producto.SKU</div>
+            </div>
+            <div class="detail-btns">
+                <button class="btn-primary" @onclick="() => mostrarFormMovimiento = true">
+                    + Register movement
+                </button>
+                <button class="btn-outline" @onclick='() => Navigation.NavigateTo($"/products/{Id}/edit")'>
+                    Edit
+                </button>
+                <button class="btn-danger" @onclick="Eliminar">Delete</button>
+            </div>
+        </div>
+
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-lbl">Category</div>
+                <div class="info-val">@producto.Categoria</div>
+            </div>
+            <div class="info-item">
+                <div class="info-lbl">Stock</div>
+                <div class="info-val @(producto.CantidadEnStock < 10 ? "warn" : "")">
+                    @producto.CantidadEnStock units
+                    @if (producto.CantidadEnStock < 10)
+                    {
+                        <span> — Low stock</span>
+                    }
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-lbl">Unit price</div>
+                <div class="info-val">$@producto.PrecioUnitario.ToString("N2")</div>
+            </div>
+            <div class="info-item">
+                <div class="info-lbl">Created</div>
+                <div class="info-val">@producto.FechaCreacion.ToString("yyyy-MM-dd")</div>
+            </div>
+            @* Audit trail *@
+            <div class="info-item">
+                <div class="info-lbl">Created by</div>
+                <div class="info-val">@(producto.CreatedBy ?? "—")</div>
+            </div>
+            <div class="info-item">
+                <div class="info-lbl">Last updated by</div>
+                <div class="info-val">@(producto.UpdatedBy ?? "—")</div>
+            </div>
+        </div>
+    </div>
+
+    @if (mostrarFormMovimiento)
+    {
+        <div class="form-card">
+            <h3>Register movement</h3>
+            <div class="toggle">
+                <button class="@(movimiento.Tipo == MovementType.Inbound ? "tog-active" : "tog-btn")"
+                        @onclick='() => movimiento.Tipo = MovementType.Inbound'>
+                    ↑ Inbound
+                </button>
+                <button class="@(movimiento.Tipo == MovementType.Outbound ? "tog-active" : "tog-btn")"
+                        @onclick='() => movimiento.Tipo = MovementType.Outbound'>
+                    ↓ Outbound
+                </button>
+            </div>
+            <div class="field">
+                <label>Quantity</label>
+                <input type="number" @bind="movimiento.Cantidad" min="1" />
+            </div>
+            <div class="field">
+                <label>Reason</label>
+                <input type="text" @bind="movimiento.Motivo" placeholder="e.g. Sales order #4521" />
+            </div>
+            @if (producto.CantidadEnStock < 10)
+            {
+                <div class="alert-warn">
+                    ⚠ Current stock: @producto.CantidadEnStock units — verify outbound quantity
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(errorMovimiento))
+            {
+                <div class="alert-error">@errorMovimiento</div>
+            }
+            <div class="form-actions">
+                <button class="btn-primary" @onclick="RegistrarMovimiento">Register</button>
+                <button class="btn-outline" @onclick="() => mostrarFormMovimiento = false">Cancel</button>
+            </div>
+        </div>
+    }
+
+    <div class="section-title">Movement history</div>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Type</th>
+                <th>Qty</th>
+                <th>Reason</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var m in movimientos)
+            {
+                <tr>
+                    <td>
+                        <span class="@(m.Tipo == MovementType.Inbound ? "badge-in" : "badge-out")">
+                            @m.Tipo
+                        </span>
+                    </td>
+                    <td class="@(m.Tipo == MovementType.Inbound ? "qty-in" : "qty-out")">
+                        @(m.Tipo == MovementType.Inbound ? "+" : "-")@m.Cantidad
+                    </td>
+                    <td>@m.Motivo</td>
+                    <td>@m.FechaHora.ToString("yyyy-MM-dd HH:mm")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private ProductoDto? producto;
+    private List<MovimientoStockDto> movimientos = new();
+    private CrearMovimientoDto movimiento = new();
+    private bool mostrarFormMovimiento = false;
+    private string? errorMovimiento;
+
+    protected override async Task OnInitializedAsync()
+    {
+        producto = await ProductService.GetByIdAsync(Id);
+        movimientos = await ProductService.GetMovementsAsync(Id);
+    }
+
+    async Task RegistrarMovimiento()
+    {
+        errorMovimiento = null;
+        var ok = await ProductService.RegisterMovementAsync(Id, movimiento);
+        if (ok)
+        {
+            mostrarFormMovimiento = false;
+            movimiento = new();
+            producto = await ProductService.GetByIdAsync(Id);
+            movimientos = await ProductService.GetMovementsAsync(Id);
+        }
+        else
+        {
+            errorMovimiento = "Could not register movement. Check stock availability.";
+        }
+    }
+
+    async Task Eliminar()
+    {
+        var ok = await ProductService.DeleteAsync(Id);
+        if (ok) Navigation.NavigateTo("/");
+    }
+}

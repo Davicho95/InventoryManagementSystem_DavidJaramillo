@@ -1,0 +1,118 @@
+﻿@page "/"
+@using InventoryWeb.Models
+@using InventoryWeb.Services
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject ProductService ProductService
+@inject NavigationManager Navigation
+
+<PageTitle>Products</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>Products</h1>
+    </div>
+    <div class="actions">
+        <select @bind="categoriaFiltro" @bind:after="Filtrar">
+            <option value="">All categories</option>
+            @foreach (var cat in categorias)
+            {
+                <option value="@cat">@cat</option>
+            }
+        </select>
+        <select @bind="lowStockFiltro" @bind:after="Filtrar">
+            <option value="0">All stock</option>
+            <option value="10">Low stock (&lt;10)</option>
+        </select>
+        <button class="btn-primary" @onclick='() => Navigation.NavigateTo("/products/new")'>
+            + New product
+        </button>
+    </div>
+</div>
+
+@if (loading)
+{
+    <p class="loading">Loading...</p>
+}
+else if (!productos.Any())
+{
+    <p class="empty">No products found.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Category</th>
+                <th>Stock</th>
+                <th>Price</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in productos)
+            {
+                <tr class="@(p.CantidadEnStock < umbralLowStock ? "row-low" : "")">
+                    <td>
+                        <div class="p-name">
+                            @if (p.CantidadEnStock < umbralLowStock)
+                            {
+                                <span class="dot-warn"></span>
+                            }
+                            @p.Nombre
+                        </div>
+                        <div class="p-sku">@p.SKU</div>
+                    </td>
+                    <td><span class="badge">@p.Categoria</span></td>
+                    <td>
+                        @if (p.CantidadEnStock < umbralLowStock)
+                        {
+                            <span class="stock-low">@p.CantidadEnStock units</span>
+                        }
+                        else
+                        {
+                            <span class="stock-ok">@p.CantidadEnStock units</span>
+                        }
+                    </td>
+                    <td>$@p.PrecioUnitario.ToString("N2")</td>
+                    <td>
+                        <a class="link" href="/products/@p.Id">View →</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<ProductoDto> productos = new();
+    private List<string> categorias = new();
+    private string categoriaFiltro = "";
+    private int lowStockFiltro = 0;
+    private int umbralLowStock = 10;
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarProductos();
+    }
+
+    async Task CargarProductos()
+    {
+        loading = true;
+        productos = await ProductService.GetAllAsync();
+        categorias = productos.Select(p => p.Categoria).Distinct().ToList();
+        loading = false;
+    }
+
+    async Task Filtrar()
+    {
+        loading = true;
+        productos = await ProductService.GetAllAsync(
+            string.IsNullOrEmpty(categoriaFiltro) ? null : categoriaFiltro,
+            lowStockFiltro > 0 ? lowStockFiltro : null
+        );
+        loading = false;
+    }
+}

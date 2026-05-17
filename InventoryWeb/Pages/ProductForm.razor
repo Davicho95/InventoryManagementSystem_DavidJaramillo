@@ -1,0 +1,98 @@
+﻿@page "/products/new"
+@page "/products/{Id:int}/edit"
+@using InventoryWeb.Models
+@using InventoryWeb.Services
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject ProductService ProductService
+@inject NavigationManager Navigation
+
+<PageTitle>@(Id.HasValue ? "Edit product" : "New product")</PageTitle>
+
+<div class="page-header">
+    <a class="back-link" href="@(Id.HasValue ? $"/products/{Id}" : "/")">← Back</a>
+</div>
+
+<div class="form-card">
+    <h2>@(Id.HasValue ? "Edit product" : "Create product")</h2>
+
+    @if (!string.IsNullOrEmpty(error))
+    {
+        <div class="alert-error">@error</div>
+    }
+
+    <div class="field">
+        <label>Name</label>
+        <input type="text" @bind="model.Nombre" placeholder="Wireless Mouse" />
+    </div>
+    <div class="field">
+        <label>SKU</label>
+        <input type="text" @bind="model.SKU" placeholder="MS-WIRELESS-001" />
+    </div>
+    <div class="field">
+        <label>Category</label>
+        <input type="text" @bind="model.Categoria" placeholder="Accessories" />
+    </div>
+    <div class="field-row">
+        <div class="field">
+            <label>Stock</label>
+            <input type="number" @bind="model.CantidadEnStock" min="0" />
+        </div>
+        <div class="field">
+            <label>Price ($)</label>
+            <input type="number" @bind="model.PrecioUnitario" min="0" step="0.01" />
+        </div>
+    </div>
+    <div class="form-actions">
+        <button class="btn-primary" @onclick="Guardar" disabled="@loading">
+            @(loading ? "Saving..." : "Save product")
+        </button>
+        <button class="btn-outline" @onclick='() => Navigation.NavigateTo("/")'>
+            Cancel
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private CrearProductoDto model = new();
+    private string? error;
+    private bool loading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id.HasValue)
+        {
+            var producto = await ProductService.GetByIdAsync(Id.Value);
+            if (producto != null)
+            {
+                model = new CrearProductoDto
+                {
+                    Nombre = producto.Nombre,
+                    SKU = producto.SKU,
+                    Categoria = producto.Categoria,
+                    CantidadEnStock = producto.CantidadEnStock,
+                    PrecioUnitario = producto.PrecioUnitario
+                };
+            }
+        }
+    }
+
+    async Task Guardar()
+    {
+        loading = true;
+        error = null;
+
+        bool ok = Id.HasValue
+            ? await ProductService.UpdateAsync(Id.Value, model)
+            : await ProductService.CreateAsync(model);
+
+        loading = false;
+
+        if (ok)
+            Navigation.NavigateTo("/");
+        else
+            error = "Could not save the product. Check all fields.";
+    }
+}
