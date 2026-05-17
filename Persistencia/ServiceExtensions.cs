@@ -21,20 +21,25 @@ namespace Persistencia
         public static void AddPersistenceInfraestructure(this IServiceCollection services, IConfiguration configuration)
         {
             string cadenaConexion = configuration.GetConnectionString("DefaultConnection")!;
+            string db = configuration["ConfigDB:Db"]!;
 
-            services.AddDbContext<AppDbContext>(options => options.UseLazyLoadingProxies(true).UseSqlServer(
+            if (db == "SqlServer")
+                services.AddDbContext<AppDbContext>(options => options.UseLazyLoadingProxies(true).UseSqlServer(
                 cadenaConexion, b => b.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
+            else
+                services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite(configuration.GetConnectionString("DefaultConnection")));
 
-            
+
             services.AddIdentity<IdentityUser, IdentityRole>(options =>
-            {
-                options.Password.RequireDigit = true;
-                options.Password.RequiredLength = 6;
-                options.Password.RequireNonAlphanumeric = false;
-                options.User.RequireUniqueEmail = true;
-            })
-            .AddEntityFrameworkStores<AppDbContext>()
-            .AddDefaultTokenProviders();
+                {
+                    options.Password.RequireDigit = true;
+                    options.Password.RequiredLength = 6;
+                    options.Password.RequireNonAlphanumeric = false;
+                    options.User.RequireUniqueEmail = true;
+                })
+                .AddEntityFrameworkStores<AppDbContext>()
+                .AddDefaultTokenProviders();
 
             // Servicios
             services.AddScoped<IAuthService, AuthServiceAsync>();
